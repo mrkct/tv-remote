@@ -7,8 +7,7 @@
 #include "Config.h"
 #include "Button.h"
 #include "Macro.h"
-// #include "Buzzer.h"
-// #include "MQTTTracker.h"
+#include "TiltSensor.h"
 
 const uint16_t kCaptureBufferSize = 256;
 const uint8_t kTimeout = 15;
@@ -18,13 +17,6 @@ IRsend irsend(PIN_IR_EMITTER);
 IRrecv irrecv(PIN_IR_RECEIVER, kCaptureBufferSize, kTimeout, true);
 decode_results results;
 
-void setup() {
-  setupButtons();
-  Serial.begin(115200);
-  irsend.begin();
-  irrecv.enableIRIn();
-  // load macro from eeprom
-}
 
 // Used to avoid repeating too many times when a button is held
 enum Button lastPressedBtn = BTN_NONE;
@@ -37,13 +29,22 @@ Macro macro;
 short playingMacroIndex = 0;
 long playingMacroNextDeadline = 0;
 
+TiltSensor tiltSensor;
+
 enum State {
   STATE_DEFAULT, 
   STATE_RECORDING_MACRO, 
   STATE_PLAYING_MACRO
-};
-enum State currentState = STATE_DEFAULT;
+} currentState = STATE_DEFAULT;
 
+void setup() {
+  setupButtons();
+  Serial.begin(115200);
+  irsend.begin();
+  irrecv.enableIRIn();
+  tiltSensor.initialize();
+  // load macro from eeprom
+}
 
 void loop() {
   if (currentState == STATE_RECORDING_MACRO) {
@@ -100,10 +101,21 @@ void loop() {
     Serial.println("Mando POWER");
     irsend.sendSAMSUNG(IR_POWER);
   } else if (btn == BTN_CHANNEL) {
-    
+    Serial.println("Mando CHANNEL");
+    if (tiltSensor.isTiltedLeft()) {
+      irsend.sendSAMSUNG(IR_CHANNEL_PREVIOUS);
+    } else if (tiltSensor.isTiltedRight()) {
+      irsend.sendSAMSUNG(IR_CHANNEL_NEXT);
+    }
   } else if (btn == BTN_VOLUME) {
-    // Check tilt and send + or - accordingly
+    Serial.println("Mando VOLUME");
+    if (tiltSensor.isTiltedLeft()) {
+      irsend.sendSAMSUNG(IR_VOLUME_DOWN);
+    } else if (tiltSensor.isTiltedRight()) {
+      irsend.sendSAMSUNG(IR_VOLUME_UP);
+    }
   } else if (btn == BTN_PLAY_MACRO) {
+    Serial.println("Mando PLAY_MACRO");
     if (!macro.isValid()) {
       Serial.println("There is no macro stored");
     } else {
@@ -112,14 +124,18 @@ void loop() {
       playingMacroNextDeadline = millis();
     }
   } else if (btn == BTN_RECORD_MACRO) {
+    Serial.println("Mando RECORD_MACRO");
     Serial.println("Recording a new macro...");
     currentState = STATE_RECORDING_MACRO;
     macro.deleteMacro();
   } else if (btn == BTN_TIMER15) {
+    Serial.println("Mando TIMER15");
     turnOffTimer = millis() + 1000 * 60 * 15;  
   } else if (btn == BTN_TIMER30) {
+    Serial.println("Mando TIMER30");
     turnOffTimer = millis() + 1000 * 60 * 30;
   } else if (btn == BTN_TIMER1H) {
+    Serial.println("Mando TIMER1H");
     turnOffTimer = millis() + 1000 * 60 * 60;
   }
 }
