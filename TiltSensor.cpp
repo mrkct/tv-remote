@@ -57,3 +57,7 @@ boolean TiltSensor::isTiltedLeft() {
 boolean TiltSensor::isTiltedRight() {
   return getPitch() > TILTSENSOR_RIGHT_THRESHOLD;
 }
+
+double TiltSensor::getTilt() {
+  return getPitch();
+}

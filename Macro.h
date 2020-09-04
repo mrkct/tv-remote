@@ -11,12 +11,13 @@ class Macro {
   public:
   Macro();
 
+  boolean loadFromEEPROM();
+  void storeInEEPROM();
+  
   void deleteMacro();
   int addCommand(uint64_t command);
-  void storeMacro();
   uint64_t getCommand(int);
   short getLength();
-
   bool isValid();
 };
 

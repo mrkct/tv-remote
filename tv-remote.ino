@@ -3,6 +3,7 @@
 #include <IRsend.h>
 #include <IRrecv.h>
 #include <IRutils.h>
+#include <EEPROM.h>
 #include "SAMSUNG_IR.h"
 #include "Config.h"
 #include "Button.h"
@@ -38,12 +39,26 @@ enum State {
 } currentState = STATE_DEFAULT;
 
 void setup() {
-  setupButtons();
+  EEPROM.begin(512);
   Serial.begin(115200);
+  
+  setupButtons();
   irsend.begin();
   irrecv.enableIRIn();
+  
   tiltSensor.initialize();
-  // load macro from eeprom
+  
+  if (macro.loadFromEEPROM()) {
+    Serial.println("Found a stored macro. Loaded from EEPROM");
+  } else {
+    Serial.println("No macro found in EEPROM");
+    for (int i = 0; i < 100; i++) {
+      char out[10];
+      sprintf(out, "%x ", EEPROM.read(i));
+      Serial.print(out);
+    }
+    Serial.println();
+  }
 }
 
 void loop() {
@@ -58,8 +73,7 @@ void loop() {
         out += " ";
       }
       Serial.println(out);
-      // Store macro in EEPROM
-      // Buzzer success
+      macro.storeInEEPROM();
       return;
     }
     
@@ -86,6 +100,7 @@ void loop() {
   if (turnOffTimer != 0 && turnOffTimer <= millis()) {
     Serial.println("Timer OFF");
     irsend.sendSAMSUNG(IR_POWER);
+    turnOffTimer = 0;
   }
   
   enum Button btn = getPressedButton();
@@ -101,14 +116,14 @@ void loop() {
     Serial.println("Mando POWER");
     irsend.sendSAMSUNG(IR_POWER);
   } else if (btn == BTN_CHANNEL) {
-    Serial.println("Mando CHANNEL");
+    Serial.print("Mando CHANNEL.");
     if (tiltSensor.isTiltedLeft()) {
       irsend.sendSAMSUNG(IR_CHANNEL_PREVIOUS);
     } else if (tiltSensor.isTiltedRight()) {
       irsend.sendSAMSUNG(IR_CHANNEL_NEXT);
     }
   } else if (btn == BTN_VOLUME) {
-    Serial.println("Mando VOLUME");
+    Serial.print("Mando VOLUME.");
     if (tiltSensor.isTiltedLeft()) {
       irsend.sendSAMSUNG(IR_VOLUME_DOWN);
     } else if (tiltSensor.isTiltedRight()) {

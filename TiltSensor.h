@@ -18,6 +18,9 @@ class TiltSensor {
   void initialize();
   boolean isTiltedLeft();
   boolean isTiltedRight(); 
+
+  double getTilt();
+
 };
 
 #endif
