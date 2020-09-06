@@ -10,8 +10,6 @@ class TiltSensor {
   void update();
   double calculateAngle(double, double, double);
 
-  double getRoll();
-  double getPitch();
 
   public:
 
@@ -20,6 +18,9 @@ class TiltSensor {
   boolean isTiltedRight(); 
 
   double getTilt();
+
+  double getRoll();
+  double getPitch();
 
 };
 

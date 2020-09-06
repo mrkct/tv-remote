@@ -3,12 +3,13 @@
 #include <IRsend.h>
 #include <IRrecv.h>
 #include <IRutils.h>
-#include <EEPROM.h>
 #include "SAMSUNG_IR.h"
 #include "Config.h"
 #include "Button.h"
 #include "Macro.h"
 #include "TiltSensor.h"
+#include "EspMQTTClient.h"
+
 
 const uint16_t kCaptureBufferSize = 256;
 const uint8_t kTimeout = 15;
@@ -18,6 +19,15 @@ IRsend irsend(PIN_IR_EMITTER);
 IRrecv irrecv(PIN_IR_RECEIVER, kCaptureBufferSize, kTimeout, true);
 decode_results results;
 
+EspMQTTClient client(
+  WIFI_SSID, 
+  WIFI_PASSWORD, 
+  MQTT_BROKER_IP, 
+  MQTT_USERNAME, 
+  MQTT_PASSWORD, 
+  MQTT_CLIENT_NAME, 
+  MQTT_PORT 
+);
 
 // Used to avoid repeating too many times when a button is held
 enum Button lastPressedBtn = BTN_NONE;
@@ -39,29 +49,22 @@ enum State {
 } currentState = STATE_DEFAULT;
 
 void setup() {
-  EEPROM.begin(512);
-  Serial.begin(115200);
-  
   setupButtons();
+  Serial.begin(115200);
   irsend.begin();
   irrecv.enableIRIn();
-  
   tiltSensor.initialize();
-  
-  if (macro.loadFromEEPROM()) {
-    Serial.println("Found a stored macro. Loaded from EEPROM");
-  } else {
-    Serial.println("No macro found in EEPROM");
-    for (int i = 0; i < 100; i++) {
-      char out[10];
-      sprintf(out, "%x ", EEPROM.read(i));
-      Serial.print(out);
-    }
-    Serial.println();
-  }
+
+  client.enableDebuggingMessages();
+}
+
+void onConnectionEstablished() {
+  Serial.println("Connection established");
+  client.publish(MQTT_UPDATE_TOPIC, "{'event': 'hello'}", true);
 }
 
 void loop() {
+  client.loop();
   if (currentState == STATE_RECORDING_MACRO) {
     if (getPressedButton() != BTN_RECORD_MACRO) {
       currentState = STATE_DEFAULT;
@@ -73,7 +76,6 @@ void loop() {
         out += " ";
       }
       Serial.println(out);
-      macro.storeInEEPROM();
       return;
     }
     
@@ -100,7 +102,7 @@ void loop() {
   if (turnOffTimer != 0 && turnOffTimer <= millis()) {
     Serial.println("Timer OFF");
     irsend.sendSAMSUNG(IR_POWER);
-    turnOffTimer = 0;
+    client.publish(MQTT_UPDATE_TOPIC, "{'event': 'timerOff'}", true);
   }
   
   enum Button btn = getPressedButton();
@@ -110,29 +112,38 @@ void loop() {
   }
   lastPressedBtn = btn;
   lastPressedBtnTimestamp = millis();
-  // sendButtonMQTT(btn);
 
   if (btn == BTN_POWER) {
     Serial.println("Mando POWER");
     irsend.sendSAMSUNG(IR_POWER);
+    client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'POWER'}", true);
   } else if (btn == BTN_CHANNEL) {
-    Serial.print("Mando CHANNEL.");
+    Serial.print(tiltSensor.getRoll());
+    Serial.print("\t");
+    Serial.println(tiltSensor.getPitch());
+    Serial.println("Mando CHANNEL");
     if (tiltSensor.isTiltedLeft()) {
       irsend.sendSAMSUNG(IR_CHANNEL_PREVIOUS);
+      client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'CHANNEL-'}", true);
     } else if (tiltSensor.isTiltedRight()) {
       irsend.sendSAMSUNG(IR_CHANNEL_NEXT);
+      client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'CHANNEL+'}", true);
     }
   } else if (btn == BTN_VOLUME) {
-    Serial.print("Mando VOLUME.");
+    Serial.println("Mando VOLUME");
     if (tiltSensor.isTiltedLeft()) {
       irsend.sendSAMSUNG(IR_VOLUME_DOWN);
+      client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'VOLUME-'}", true);
     } else if (tiltSensor.isTiltedRight()) {
       irsend.sendSAMSUNG(IR_VOLUME_UP);
+      client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'VOLUME+'}", true);
     }
   } else if (btn == BTN_PLAY_MACRO) {
     Serial.println("Mando PLAY_MACRO");
+    client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'PLAY_MACRO'}", true);
     if (!macro.isValid()) {
       Serial.println("There is no macro stored");
+      client.publish(MQTT_UPDATE_TOPIC, "{'event': 'noMacroFound'}", true);
     } else {
       currentState = STATE_PLAYING_MACRO;
       playingMacroIndex = 0;
@@ -143,14 +154,18 @@ void loop() {
     Serial.println("Recording a new macro...");
     currentState = STATE_RECORDING_MACRO;
     macro.deleteMacro();
+    client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'RECORD_MACRO'}", true);
   } else if (btn == BTN_TIMER15) {
     Serial.println("Mando TIMER15");
-    turnOffTimer = millis() + 1000 * 60 * 15;  
+    turnOffTimer = millis() + 1000 * 60 * 15;
+    client.publish(MQTT_UPDATE_TOPIC, "{'event': 'timerSetup', 'duration': '15m'}", true);
   } else if (btn == BTN_TIMER30) {
     Serial.println("Mando TIMER30");
     turnOffTimer = millis() + 1000 * 60 * 30;
+    client.publish(MQTT_UPDATE_TOPIC, "{'event': 'timerSetup', 'duration': '30m'}", true);
   } else if (btn == BTN_TIMER1H) {
     Serial.println("Mando TIMER1H");
     turnOffTimer = millis() + 1000 * 60 * 60;
+    client.publish(MQTT_UPDATE_TOPIC, "{'event': 'timerSetup', 'duration': '1h'}", true);
   }
 }

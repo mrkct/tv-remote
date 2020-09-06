@@ -7,7 +7,6 @@ void setupButtons() {
   pinMode(PIN_MUX1, OUTPUT);
   pinMode(PIN_MUX2, OUTPUT);
   pinMode(PIN_MUX3, OUTPUT);
-  pinMode(PIN_MUX4, OUTPUT);
   pinMode(PIN_MUX_SIG, INPUT);
 }
 
@@ -31,7 +30,6 @@ static void setMuxChannel(int index) {
   digitalWrite(PIN_MUX1, states[index][3] ? HIGH: LOW);
   digitalWrite(PIN_MUX2, states[index][2] ? HIGH: LOW);
   digitalWrite(PIN_MUX3, states[index][1] ? HIGH: LOW);
-  digitalWrite(PIN_MUX4, states[index][0] ? HIGH: LOW);
 }
 
 
