@@ -1,10 +1,22 @@
 #include <Arduino.h>
 #include <EEPROM.h>
+#include <IRremoteESP8266.h>
+#include <IRsend.h>
+#include <IRrecv.h>
+#include <IRutils.h>
+#include <EspMQTTClient.h>
 #include "Config.h"
 #include "Macro.h"
+#include "State.h"
+#include "Button.h"
 
 
-Macro::Macro() { }
+Macro::Macro(IRsend *irsend, IRrecv *irrecv, decode_results *resultBuffer, EspMQTTClient *client) {
+  this->irsend = irsend;
+  this->irrecv = irrecv;
+  this->resultBuffer = resultBuffer;
+  this->mqtt = client;
+}
 
 boolean Macro::loadFromEEPROM() {
   /**
@@ -37,18 +49,6 @@ boolean Macro::loadFromEEPROM() {
   return true;
 }
 
-void Macro::deleteMacro() {
-  this->len = 0;  
-}
-
-int Macro::addCommand(uint64_t command) {
-  if (this->len == MAX_MACRO_SIZE) {
-    return -1;  
-  }
-  this->commands[this->len] = command;
-  this->len++;
-}
-
 void Macro::storeInEEPROM() {
   int addr = EEPROM_ADDR_MACRO;
   EEPROM.write(addr, (MACRO_EEPROM_MAGIC >> 8) & 0xFF);
@@ -75,10 +75,66 @@ bool Macro::isValid() {
   return this->len > 0;
 }
 
-uint64_t Macro::getCommand(int index) {
-  return this->commands[index];
+void Macro::playMacro() {
+  this->playingMacroIndex = 0;
+  this->playingMacroNextDeadline = millis();
+  setState(STATE_PLAYING_MACRO);
 }
 
-short Macro::getLength() {
-  return this->len;
+void Macro::recordMacro() {
+  this->len = 0;
+  setState(STATE_RECORDING_MACRO);
+}
+
+void Macro::playLoop() {
+  if (getCurrentState() != STATE_PLAYING_MACRO || millis() < this->playingMacroNextDeadline) {
+    return;
+  }
+  
+  Serial.print("Sending another macro command (");
+  Serial.print(this->playingMacroIndex);
+  Serial.print("/");
+  Serial.println(this->len);
+
+  this->irsend->sendSAMSUNG(this->commands[this->playingMacroIndex]);
+  
+  this->playingMacroIndex++;
+  this->playingMacroNextDeadline = millis() + 1500;
+  if (this->len == this->playingMacroIndex) {
+    setState(STATE_DEFAULT);
+  }
+}
+
+void Macro::recordLoop() {
+  static uint64_t lastIRCode = 0;
+  static long lastIRCodeTimestamp = 0;
+  
+  if (getCurrentState() != STATE_RECORDING_MACRO) {
+    return;
+  }
+
+  if (getPressedButton() != BTN_RECORD_MACRO) {
+    setState(STATE_DEFAULT);
+    this->storeInEEPROM();
+    return;
+  }
+    
+  if (this->irrecv->decode(this->resultBuffer)) {
+    Serial.println(resultToSourceCode(this->resultBuffer));
+    uint64_t command = this->resultBuffer->value;
+    if (command == lastIRCode && millis() - lastIRCodeTimestamp < 500) {
+      // This might be the original tv remote sending the same command many times
+      Serial.println("I skipped this command because it probably was a repetition");
+      return;
+    }
+    this->commands[this->len] = command;
+    this->len++;
+    lastIRCode = command;
+    lastIRCodeTimestamp = millis();
+  }
+}
+
+void Macro::loop() {
+  this->playLoop();
+  this->recordLoop();
 }

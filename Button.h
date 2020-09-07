@@ -17,6 +17,4 @@ void setupButtons();
 
 enum Button getPressedButton(void);
 
-
-
 #endif
