@@ -5,10 +5,12 @@
  * Edit this file with your wiring, tv model etc
  */
 
-#define PIN_MUX1    D5
-#define PIN_MUX2    D6
-#define PIN_MUX3    D7
-#define PIN_MUX_SIG D8
+#define PIN_BUZZER  D0
+
+#define PIN_MUX1    D6
+#define PIN_MUX2    D7
+#define PIN_MUX3    D8
+#define PIN_MUX_SIG D5
 
 #define PIN_MPU6050_SDA D3
 #define PIN_MPU6050_SCL D4
@@ -24,8 +26,8 @@
 #define PIN_IR_EMITTER D1
 #define PIN_IR_RECEIVER D2
 
-#define WIFI_SSID     "YOUR-WIFI-SSID-HERE"
-#define WIFI_PASSWORD "YOUR-WIFI-PASSWORD-HERE"
+#define WIFI_SSID     "YOUR-WIFI-SSID"
+#define WIFI_PASSWORD "YOUR-WIFI-PASSWORD"
 // This is test.mosquitto.org 's server
 #define MQTT_BROKER_IP    "5.196.95.208"
 #define MQTT_USERNAME     ""

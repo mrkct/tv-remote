@@ -24,6 +24,7 @@ IRsend irsend(PIN_IR_EMITTER);
 IRrecv irrecv(PIN_IR_RECEIVER, kCaptureBufferSize, kTimeout, true);
 decode_results results;
 
+
 EspMQTTClient client(
   WIFI_SSID, 
   WIFI_PASSWORD, 
@@ -48,12 +49,13 @@ int16_t ax, ay, az, gx, gy, gz;
 void setup() {
   setupButtons();
   Serial.begin(115200);
+  Serial.println("Hello");
   irsend.begin();
   irrecv.enableIRIn();
 
   Wire.begin(PIN_MPU6050_SDA, PIN_MPU6050_SCL);
   accelgyro.initialize();
-
+  
   client.enableDebuggingMessages();
 }
 
@@ -95,6 +97,11 @@ void loop() {
       irsend.sendSAMSUNG(IR_CHANNEL_NEXT);
       client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'CHANNEL+'}", true);
     }
+
+    if (ay == 0) {
+      accelgyro.initialize();
+      Serial.println("Resetto il accelgyro...");
+    }
   } else if (btn == BTN_VOLUME) {
     Serial.println("Mando VOLUME");
     accelgyro.getMotion6(&ax, &ay, &az, &gx, &gy, &gz);
@@ -102,12 +109,17 @@ void loop() {
     Serial.print("ax: ");
     Serial.println(ax);
     
-    if (ax < -10000) {
+    if (ay < -10000) {
       irsend.sendSAMSUNG(IR_VOLUME_DOWN);
       client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'VOLUME-'}", true);
-    } else if (ax > +10000) {
+    } else if (ay > +10000) {
       irsend.sendSAMSUNG(IR_VOLUME_UP);
       client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'VOLUME+'}", true);
+    }
+
+    if (ay == 0) {
+      accelgyro.initialize();
+      Serial.println("Resetto il accelgyro...");
     }
   } else if (btn == BTN_PLAY_MACRO) {
     Serial.println("Mando PLAY_MACRO");

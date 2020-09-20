@@ -20,6 +20,24 @@ void PowerManager::loop() {
     this->mqtt->publish(MQTT_UPDATE_TOPIC, "{'event': 'timerOff'}", true);
     this->timerEnabled = false;
   }
+
+  /**
+   * By default ESP.deepSleep, if the time is = 0, sleeps until a LOW signal 
+   * is sent to the GPIO 16 (D0 on my board). 
+   * If a timer is active, we need to wake up just before the timer goes off 
+   * or we wont send the POWER signal
+   */
+  
+  /*
+  if (millis() - this->lastActionTime > SLEEP_TIMER) {
+    long sleepTime = 0;
+    if (this->timerEnabled) {
+      sleepTime = this->turnOffTime - millis();
+    }
+    // Because it takes time in microseconds
+    ESP.deepSleep(sleepTimer * 1000);
+  }
+  */
 }
 
 void PowerManager::setTurnOffTimer(long timeFromNow) {
