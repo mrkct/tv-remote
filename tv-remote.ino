@@ -1,3 +1,4 @@
+
 #include <Arduino.h>
 #include <IRremoteESP8266.h>
 #include <IRsend.h>
@@ -7,6 +8,8 @@
 #include <I2Cdev.h>
 #include <MPU6050.h>
 #include <Wire.h>
+#include <EEPROM.h>
+
 
 #include "SAMSUNG_IR.h"
 #include "Config.h"
@@ -47,9 +50,10 @@ MPU6050 accelgyro;
 int16_t ax, ay, az, gx, gy, gz;
 
 void setup() {
-  setupButtons();
+  EEPROM.begin(512);
   Serial.begin(115200);
-  Serial.println("Hello");
+  
+  setupButtons();
   irsend.begin();
   irrecv.enableIRIn();
 
@@ -57,6 +61,8 @@ void setup() {
   accelgyro.initialize();
   
   client.enableDebuggingMessages();
+
+  macro.loadFromEEPROM();  
 }
 
 void onConnectionEstablished() {
@@ -91,11 +97,11 @@ void loop() {
     Serial.println(ay);
     
     if (ay < -10000) {
-      irsend.sendSAMSUNG(IR_CHANNEL_PREVIOUS);
-      client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'CHANNEL-'}", true);
-    } else if (ay > +10000) {
       irsend.sendSAMSUNG(IR_CHANNEL_NEXT);
       client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'CHANNEL+'}", true);
+    } else if (ay > +10000) {
+      irsend.sendSAMSUNG(IR_CHANNEL_PREVIOUS);
+      client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'CHANNEL-'}", true);
     }
 
     if (ay == 0) {
@@ -110,16 +116,17 @@ void loop() {
     Serial.println(ax);
     
     if (ay < -10000) {
-      irsend.sendSAMSUNG(IR_VOLUME_DOWN);
-      client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'VOLUME-'}", true);
-    } else if (ay > +10000) {
       irsend.sendSAMSUNG(IR_VOLUME_UP);
       client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'VOLUME+'}", true);
+    } else if (ay > +10000) {
+      irsend.sendSAMSUNG(IR_VOLUME_DOWN);
+      client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'VOLUME-'}", true);
     }
 
+    // This is an ugly hack because my accelerometer sometimes loses power due to faulty connections
     if (ay == 0) {
       accelgyro.initialize();
-      Serial.println("Resetto il accelgyro...");
+      Serial.println("Resetting the accelerometer");
     }
   } else if (btn == BTN_PLAY_MACRO) {
     Serial.println("Mando PLAY_MACRO");
@@ -137,6 +144,7 @@ void loop() {
     client.publish(MQTT_UPDATE_TOPIC, "{'event': 'button', 'button': 'RECORD_MACRO'}", true);
   } else if (btn == BTN_TIMER15) {
     Serial.println("Mando TIMER15");
+    
     powerManager.setTurnOffTimer(1000 * 60 * 15);
     client.publish(MQTT_UPDATE_TOPIC, "{'event': 'timerSetup', 'duration': '15m'}", true);
   } else if (btn == BTN_TIMER30) {

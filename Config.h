@@ -21,19 +21,20 @@
 #define MACRO_EEPROM_MAGIC 0xCAFE
 #define EEPROM_ADDR_MACRO 0
 
-#define BTN_DEBOUNCE_TIME 1500
+#define BTN_DEBOUNCE_TIME 800
 
 #define PIN_IR_EMITTER D1
 #define PIN_IR_RECEIVER D2
 
-#define WIFI_SSID     "YOUR-WIFI-SSID"
-#define WIFI_PASSWORD "YOUR-WIFI-PASSWORD"
-// This is test.mosquitto.org 's server
-#define MQTT_BROKER_IP    "5.196.95.208"
+#define WIFI_SSID     "YOUR-WIFI-SSID-HERE"
+#define WIFI_PASSWORD "YOUR-WIFI-PASSWORD-HERE"
+// This is mqtt.eclipse.org 's server
+#define MQTT_BROKER_IP    "137.135.83.217"
 #define MQTT_USERNAME     ""
 #define MQTT_PASSWORD     ""
 #define MQTT_CLIENT_NAME  "MyTVRemote" 
 #define MQTT_PORT         1883
 #define MQTT_UPDATE_TOPIC "mrkct/tvremote/updates"
+#define MQTT_MESSAGES_TOPIC "mrkct/tvremote/messages"
 
 #endif

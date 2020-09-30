@@ -19,6 +19,7 @@ void PowerManager::loop() {
     this->irsend->sendSAMSUNG(IR_POWER);
     this->mqtt->publish(MQTT_UPDATE_TOPIC, "{'event': 'timerOff'}", true);
     this->timerEnabled = false;
+    this->mqtt->publish(MQTT_MESSAGES_TOPIC, "La TV è stata spenta", true);
   }
 
   /**
@@ -43,4 +44,9 @@ void PowerManager::loop() {
 void PowerManager::setTurnOffTimer(long timeFromNow) {
   this->timerEnabled = true;
   this->turnOffTime = millis() + timeFromNow;
+
+
+  char buffer[128];
+  sprintf(buffer, "La TV si spegnerà tra %d minuti", timeFromNow / 1000 / 60);
+  this->mqtt->publish(MQTT_MESSAGES_TOPIC, buffer, true); 
 }

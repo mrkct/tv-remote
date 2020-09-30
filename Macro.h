@@ -12,6 +12,7 @@ class Macro {
   private:
   int len;
   uint64_t commands[MAX_MACRO_SIZE];
+  uint16_t commandsWaitTimes[MAX_MACRO_SIZE];
 
   short playingMacroIndex = 0;
   long playingMacroNextDeadline = 0;
