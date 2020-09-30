@@ -5,6 +5,11 @@ Un telecomando TV che, oltre alle funzionalità base, aggiunge:
 - Traccia dati sull'utilizzo del telecomando e li manda via MQTT ad un server locale
 - Comandi attivati con il movimento
 
+## Video
+[Funzioni Base (accendi/spegni, cambia canale ed alza/abbassa volume)](https://www.youtube.com/watch?v=fA1kTcw5104)  
+[Registrazione e prova di una macro](https://youtu.be/JduhtKOBIow)  
+[Logging pulsanti via MQTT](https://youtu.be/hkHsn6ePBMc)  
+
 ## Per adattare
 Nel file `Config.h` si possono cambiare i pin usati, le info del wifi ed il broker mqtt a cui connettersi.  
 
